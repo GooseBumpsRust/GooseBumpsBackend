@@ -1,4 +1,4 @@
-use rocket::{get, post, serde::json::Json, serde::uuid::Uuid};
+use rocket::{get, post, put, serde::json::Json, serde::uuid::Uuid};
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
@@ -11,6 +11,7 @@ struct User {
     user_id: uuid::Uuid,
     #[schemars(example = "example_solana_token")]
     solana_token: String,
+    user_progress: u32,
 }
 
 fn example_uuid() -> &'static str {
@@ -36,14 +37,62 @@ fn create_user(create_user_request: Json<CreateUserRequest>) -> Json<User> {
     let user = User {
         user_id,
         solana_token: create_user_request.solana_token,
+        user_progress: 0,
     };
     Json(user)
+}
+
+#[openapi(tag = "Users")]
+#[get("/user/<user_id>")]
+fn get_user(user_id: uuid::Uuid) -> Option<Json<User>> {
+    Some(Json(User {
+        user_id,
+        solana_token: Uuid::new_v4().to_string(),
+        user_progress: 0,
+    }))
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct PutUserprogressRequest {
+    #[schemars(example = "example_uuid")]
+    user_id: uuid::Uuid,
+    challenge_id: String,
+    chapter_id: String,
+}
+
+#[openapi(tag = "Challenge")]
+#[put("/userprogress", data = "<put_userprogress_request>")]
+fn put_userprogress(put_userprogress_request: Json<PutUserprogressRequest>) -> Option<Json<User>> {
+    let user_id = put_userprogress_request.into_inner().user_id;
+    Some(Json(User {
+        user_id,
+        solana_token: Uuid::new_v4().to_string(),
+        user_progress: 0,
+    }))
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct MintNFTRequest {
+    #[schemars(example = "example_uuid")]
+    user_id: uuid::Uuid,
+    challenge_id: String,
+}
+
+#[openapi(tag = "NFT")]
+#[post("/mint-nft", data = "<mint_nft_request>")]
+fn post_mint_nft(mint_nft_request: Json<MintNFTRequest>) -> () {
+    println!("{}", mint_nft_request.into_inner().challenge_id);
 }
 
 #[rocket::main]
 async fn main() {
     let launch_result = rocket::build()
-        .mount("/", openapi_get_routes![create_user,])
+        .mount(
+            "/",
+            openapi_get_routes![create_user, get_user, put_userprogress, post_mint_nft],
+        )
         .mount(
             "/swagger-ui/",
             make_swagger_ui(&SwaggerUIConfig {
