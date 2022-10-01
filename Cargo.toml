@@ -12,7 +12,6 @@ name = "goose_bumps_backend"
 path = "src/bin.rs"
 
 [dependencies]
-diesel = { version = "2.0.0", features = ["sqlite"] }
 dotenvy = "0.15"
 rocket = { version = "=0.5.0-rc.2", default-features = false, features = ["json", "uuid"] }
 rocket_okapi = { version = "0.8.0-rc.2", features = ["swagger", "uuid"] }
