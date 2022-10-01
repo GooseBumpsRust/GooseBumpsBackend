@@ -3,6 +3,7 @@ extern crate rocket;
 
 use goose_bumps_backend_lib::database::Database;
 use goose_bumps_backend_lib::models::{example_solana_token, example_uuid, User};
+use goose_bumps_backend_lib::solana::mint;
 use rocket::State;
 use rocket::{get, post, put, serde::json::Json, serde::uuid::Uuid};
 use rocket_okapi::okapi::schemars;
@@ -88,8 +89,18 @@ struct MintNFTRequest {
 
 #[openapi(tag = "NFT")]
 #[post("/mint-nft", data = "<mint_nft_request>")]
-fn post_mint_nft(mint_nft_request: Json<MintNFTRequest>) -> () {
-    println!("{}", mint_nft_request.into_inner().challenge_id);
+fn post_mint_nft(
+    database: &State<Arc<Mutex<Database>>>,
+    mint_nft_request: Json<MintNFTRequest>,
+) -> () {
+    let mint_nft_request = mint_nft_request.into_inner();
+    println!("{}", mint_nft_request.challenge_id);
+    let database = database.try_lock().unwrap();
+    let user = database.users.get(&mint_nft_request.user_id.to_string());
+    match user {
+        Some(user) => mint(user.solana_token.to_string()),
+        None => (),
+    }
 }
 
 #[launch]

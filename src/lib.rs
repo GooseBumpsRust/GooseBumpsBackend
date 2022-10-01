@@ -1,6 +1,7 @@
 pub mod database;
 pub mod models;
 pub mod schema;
+pub mod solana;
 
 use diesel::prelude::*;
 use dotenvy::dotenv;
