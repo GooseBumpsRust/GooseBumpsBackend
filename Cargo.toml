@@ -1,8 +1,19 @@
 [package]
-name = "GooseBumpsBackend"
+name = "goose_bumps_backend"
 version = "0.1.0"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[lib]
+name = "goose_bumps_backend_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "goose_bumps_backend"
+path = "src/bin.rs"
 
 [dependencies]
+rocket = { version = "=0.5.0-rc.2", default-features = false, features = ["json", "uuid"] }
+rocket_okapi = { version = "0.8.0-rc.2", features = ["swagger", "uuid"] }
+serde = "1.0"
+schemars = { version = "0.8", features = ["uuid1"] }
+uuid = { version = "1.1.2" , features = ["v4"] }
