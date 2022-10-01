@@ -1,3 +1,6 @@
+pub mod models;
+pub use models::User;
+
 #[cfg(test)]
 mod tests {
     #[test]

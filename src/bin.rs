@@ -3,24 +3,7 @@ use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
 use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-struct User {
-    #[schemars(example = "example_uuid")]
-    user_id: uuid::Uuid,
-    #[schemars(example = "example_solana_token")]
-    solana_token: String,
-    user_progress: u32,
-}
-
-fn example_uuid() -> &'static str {
-    "fdb12d51-0e3f-4ff8-821e-fbc255d8e413"
-}
-
-fn example_solana_token() -> &'static str {
-    "fdb12d51-0e3f-4ff8-821e-fbc255d8e413"
-}
+use goose_bumps_backend_lib::models::{User, example_solana_token,example_uuid};
 
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
@@ -37,7 +20,7 @@ fn create_user(create_user_request: Json<CreateUserRequest>) -> Json<User> {
     let user = User {
         user_id,
         solana_token: create_user_request.solana_token,
-        user_progress: 0,
+        chapter_ids: vec![],
     };
     Json(user)
 }
@@ -48,7 +31,7 @@ fn get_user(user_id: uuid::Uuid) -> Option<Json<User>> {
     Some(Json(User {
         user_id,
         solana_token: Uuid::new_v4().to_string(),
-        user_progress: 0,
+        chapter_ids: vec![],
     }))
 }
 
@@ -64,11 +47,13 @@ struct PutUserprogressRequest {
 #[openapi(tag = "Challenge")]
 #[put("/userprogress", data = "<put_userprogress_request>")]
 fn put_userprogress(put_userprogress_request: Json<PutUserprogressRequest>) -> Option<Json<User>> {
-    let user_id = put_userprogress_request.into_inner().user_id;
+    let userprogress_request = put_userprogress_request.into_inner();
+    let user_id = userprogress_request.user_id;
+    let chapter_id = userprogress_request.chapter_id;
     Some(Json(User {
         user_id,
         solana_token: Uuid::new_v4().to_string(),
-        user_progress: 0,
+        chapter_ids: vec![chapter_id.clone()],
     }))
 }
 
