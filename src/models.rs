@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, JsonSchema, Queryable)]
+#[derive(Serialize, Deserialize, JsonSchema, Queryable, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct User {
     #[schemars(example = "example_uuid")]
