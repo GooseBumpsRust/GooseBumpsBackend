@@ -3,7 +3,7 @@ extern crate rocket;
 
 use goose_bumps_backend_lib::database::Database;
 use goose_bumps_backend_lib::models::{example_solana_token, example_uuid, User};
-use goose_bumps_backend_lib::solana::mint;
+use goose_bumps_backend_lib::solana::{create_contract, mint};
 use rocket::State;
 use rocket::{get, post, put, serde::json::Json, serde::uuid::Uuid};
 use rocket_okapi::okapi::schemars;
@@ -105,6 +105,7 @@ fn post_mint_nft(
 
 #[launch]
 pub fn rocket() -> _ {
+    create_contract().unwrap();
     let database = Database::new();
     let database = Arc::new(Mutex::new(database));
 
