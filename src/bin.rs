@@ -1,3 +1,6 @@
+#[macro_use]
+extern crate rocket;
+
 use goose_bumps_backend_lib::database::Database;
 use goose_bumps_backend_lib::models::{example_solana_token, example_uuid, User};
 use rocket::State;
@@ -89,12 +92,12 @@ fn post_mint_nft(mint_nft_request: Json<MintNFTRequest>) -> () {
     println!("{}", mint_nft_request.into_inner().challenge_id);
 }
 
-#[rocket::main]
-async fn main() {
+#[launch]
+pub fn rocket() -> _ {
     let database = Database::new();
     let database = Arc::new(Mutex::new(database));
 
-    let launch_result = rocket::build()
+    rocket::build()
         .mount(
             "/",
             openapi_get_routes![create_user, get_user, put_userprogress, post_mint_nft],
@@ -107,10 +110,32 @@ async fn main() {
             }),
         )
         .manage(database)
-        .launch()
-        .await;
-    match launch_result {
-        Ok(_) => println!("Rocket shut down gracefully."),
-        Err(err) => println!("Rocket had an error: {}", err),
-    };
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::rocket;
+    use crate::CreateUserRequest;
+
+    use goose_bumps_backend_lib::models::User;
+    use rocket::http::Status;
+    use rocket::local::blocking::Client;
+    use rocket::serde::json::json;
+
+    #[test]
+    fn hello_world() {
+        let client = Client::tracked(rocket()).expect("valid rocket instance");
+        let body = json!(CreateUserRequest {
+            solana_token: "token".to_string()
+        });
+        let response = client.post("/user").body(body.to_string()).dispatch();
+        assert_eq!(response.status(), Status::Ok);
+        let user = response.into_json::<User>().unwrap();
+        let user_id = user.user_id;
+
+        let response = client
+            .get(format!("/user/{}", user_id.to_string()))
+            .dispatch();
+        assert_eq!(response.status(), Status::Ok);
+    }
 }
