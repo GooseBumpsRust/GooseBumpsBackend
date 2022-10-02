@@ -1,6 +1,7 @@
 pub mod database;
 pub mod models;
 pub mod solana;
+pub mod web3;
 
 #[cfg(test)]
 mod tests {

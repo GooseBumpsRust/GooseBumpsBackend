@@ -1,9 +1,11 @@
 #[macro_use]
 extern crate rocket;
 
+use futures::executor::block_on;
 use goose_bumps_backend_lib::database::Database;
 use goose_bumps_backend_lib::models::{example_solana_token, example_uuid, User};
 use goose_bumps_backend_lib::solana::mint;
+use goose_bumps_backend_lib::web3::{deploy_contract, transfer_nft};
 use rocket::State;
 use rocket::{get, post, put, serde::json::Json, serde::uuid::Uuid};
 use rocket_okapi::okapi::schemars;
@@ -89,7 +91,7 @@ struct MintNFTRequest {
 
 #[openapi(tag = "NFT")]
 #[post("/mint-nft", data = "<mint_nft_request>")]
-fn post_mint_nft(
+async fn post_mint_nft(
     database: &State<Arc<Mutex<Database>>>,
     mint_nft_request: Json<MintNFTRequest>,
 ) -> () {
@@ -103,15 +105,40 @@ fn post_mint_nft(
     }
 }
 
+pub fn example_address() -> &'static str {
+    "0x5cf2273601FD25b8CA59d5d22966cD121c1BFafe"
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct TransferNFTRequest {
+    #[schemars(example = "example_address")]
+    to_address: String,
+    token_id: u32,
+}
+
+#[openapi(tag = "NFT")]
+#[post("/transfer-nft", data = "<transfer_nft_request>")]
+async fn post_transfer_nft(
+    database: &State<Arc<Mutex<Database>>>,
+    transfer_nft_request: Json<TransferNFTRequest>,
+) -> () {
+    let transfer_nft_request = transfer_nft_request.into_inner();
+    println!("{}", transfer_nft_request.to_address);
+    //let database = database.try_lock().unwrap();
+    transfer_nft(transfer_nft_request.to_address, transfer_nft_request.token_id).await.unwrap();
+}
+
 #[launch]
 pub fn rocket() -> _ {
     let database = Database::new();
     let database = Arc::new(Mutex::new(database));
 
+    block_on(deploy_contract()).unwrap();
     rocket::build()
         .mount(
             "/",
-            openapi_get_routes![create_user, get_user, put_userprogress, post_mint_nft],
+            openapi_get_routes![create_user, get_user, put_userprogress, post_mint_nft, post_transfer_nft],
         )
         .mount(
             "/swagger-ui/",
