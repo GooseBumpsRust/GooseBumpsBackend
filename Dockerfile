@@ -8,6 +8,7 @@ RUN echo "fn main() {}" > src/bin.rs
 RUN cargo build --release
 RUN rm src/*.rs
 COPY src ./src
+COPY contracts ./contracts
 RUN touch src/lib.rs
 RUN touch src/bin.rs
 RUN cargo build --release
