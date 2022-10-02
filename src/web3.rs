@@ -38,7 +38,6 @@ pub async fn transfer_nft(to_address: String, token_id: u32) -> Result<(), Box<d
     dotenv().ok();
     let url = env::var("ETH_NODE").expect("ETH_NODE must be set");
     let eth_key = env::var("ETH_KEY").expect("ETH_KEY must be set");
-    let owner_address = env::var("OWNER_ADDRESS").expect("OWNER_ADDRESS must be set");
     let contract_address = env::var("CONTRACT_ADDRESS").expect("CONTRACT_ADDRESS must be set");
     let transport = web3::transports::Http::new(&url)?;
     let abi = include_bytes!("../contracts/GooseBumpsNFT.abi");
@@ -46,7 +45,7 @@ pub async fn transfer_nft(to_address: String, token_id: u32) -> Result<(), Box<d
     let pkey: SecretKey = eth_key.parse().unwrap();
     let contract_address = Address::from_str(&contract_address).unwrap();
     let contract = Contract::from_json(web3.eth(), contract_address, abi).unwrap();
-    let owner_address = Address::from_str(&owner_address).unwrap();
+    let owner_address = SecretKeyRef::new(&pkey).address();
     let to_address  = Address::from_str(&to_address).unwrap();
     let signed = contract
         .signed_call(

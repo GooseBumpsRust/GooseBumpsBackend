@@ -8,6 +8,9 @@ use goose_bumps_backend_lib::solana::mint;
 use goose_bumps_backend_lib::web3::{deploy_contract, transfer_nft};
 use rocket::State;
 use rocket::{get, post, put, serde::json::Json, serde::uuid::Uuid};
+use rocket::fairing::{Fairing, Info, Kind};
+use rocket::http::{Header, Status};
+use rocket::{Request, Response};
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
 use rocket_okapi::{openapi, openapi_get_routes, swagger_ui::*};
@@ -129,6 +132,28 @@ async fn post_transfer_nft(
     transfer_nft(transfer_nft_request.to_address, transfer_nft_request.token_id).await.unwrap();
 }
 
+pub struct CORS;
+
+#[rocket::async_trait]
+impl Fairing for CORS {
+    fn info(&self) -> Info {
+        Info {
+            name: "Attaching CORS headers to responses",
+            kind: Kind::Response,
+        }
+    }
+
+    async fn on_response<'r>(&self, _request: &'r Request<'_>, response: &mut Response<'r>) {
+        response.set_header(Header::new("Access-Control-Allow-Origin", "*"));
+        response.set_header(Header::new(
+            "Access-Control-Allow-Methods",
+            "POST, GET, PATCH, OPTIONS",
+        ));
+        response.set_header(Header::new("Access-Control-Allow-Headers", "*"));
+        response.set_header(Header::new("Access-Control-Allow-Credentials", "true"));
+    }
+}
+
 #[launch]
 pub fn rocket() -> _ {
     let database = Database::new();
@@ -136,6 +161,7 @@ pub fn rocket() -> _ {
 
     block_on(deploy_contract()).unwrap();
     rocket::build()
+        .attach(CORS)
         .mount(
             "/",
             openapi_get_routes![create_user, get_user, put_userprogress, post_mint_nft, post_transfer_nft],
