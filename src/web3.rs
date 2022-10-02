@@ -1,14 +1,14 @@
-use std::str::FromStr;
 use dotenvy::dotenv;
 use hex_literal::hex;
+use secp256k1::SecretKey;
 use std::env;
+use std::str::FromStr;
 use std::time;
 use web3::{
     contract::{Contract, Error, Options},
-    signing::{SecretKeyRef, Key},
+    signing::{Key, SecretKeyRef},
     types::{Address, H256, U256},
 };
-use secp256k1::SecretKey;
 
 pub async fn deploy_contract() -> web3::contract::Result<()> {
     dotenv().ok();
@@ -34,7 +34,10 @@ pub async fn deploy_contract() -> web3::contract::Result<()> {
     Ok(())
 }
 
-pub async fn transfer_nft(to_address: String, token_id: u32) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn transfer_nft(
+    to_address: String,
+    token_id: u32,
+) -> Result<String, Box<dyn std::error::Error>> {
     dotenv().ok();
     let url = env::var("ETH_NODE").expect("ETH_NODE must be set");
     let eth_key = env::var("ETH_KEY").expect("ETH_KEY must be set");
@@ -46,18 +49,17 @@ pub async fn transfer_nft(to_address: String, token_id: u32) -> Result<(), Box<d
     let contract_address = Address::from_str(&contract_address).unwrap();
     let contract = Contract::from_json(web3.eth(), contract_address, abi).unwrap();
     let owner_address = SecretKeyRef::new(&pkey).address();
-    let to_address  = Address::from_str(&to_address).unwrap();
-    let signed = contract
-        .signed_call(
+    let to_address = Address::from_str(&to_address).unwrap();
+    let result = contract
+        .signed_call_with_confirmations(
             "transferFrom",
             (owner_address, to_address, U256::from(token_id)),
             Options::default(),
+            2,
             &pkey,
         )
         .await;
-    match signed {
-        Ok(s) => println!("{}", s),
-        Err(err) => println!("{}", err),
-    };
-    Ok(())
+    println!("{:?}", result);
+    let transaction_hash = result?.transaction_hash;
+    Ok(format!("{:?}", transaction_hash))
 }

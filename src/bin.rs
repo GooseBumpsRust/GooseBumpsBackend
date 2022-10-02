@@ -6,10 +6,10 @@ use goose_bumps_backend_lib::database::Database;
 use goose_bumps_backend_lib::models::{example_solana_token, example_uuid, User};
 use goose_bumps_backend_lib::solana::mint;
 use goose_bumps_backend_lib::web3::{deploy_contract, transfer_nft};
-use rocket::State;
-use rocket::{get, post, put, options, serde::json::Json, serde::uuid::Uuid};
 use rocket::fairing::{Fairing, Info, Kind};
-use rocket::http::{Header, Status};
+use rocket::http::{Header};
+use rocket::State;
+use rocket::{get, options, post, put, serde::json::Json, serde::uuid::Uuid};
 use rocket::{Request, Response};
 use rocket_okapi::okapi::schemars;
 use rocket_okapi::okapi::schemars::JsonSchema;
@@ -126,7 +126,13 @@ pub fn example_address() -> &'static str {
 struct TransferNFTRequest {
     #[schemars(example = "example_address")]
     to_address: String,
-    token_id: u32,
+    token_id: Option<u32>,
+}
+
+#[derive(Serialize, Deserialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct TransferNFTResponse {
+    transaction_hash: String,
 }
 
 #[openapi(tag = "NFT")]
@@ -134,11 +140,21 @@ struct TransferNFTRequest {
 async fn post_transfer_nft(
     database: &State<Arc<Mutex<Database>>>,
     transfer_nft_request: Json<TransferNFTRequest>,
-) -> () {
+) -> Json<TransferNFTResponse> {
     let transfer_nft_request = transfer_nft_request.into_inner();
     println!("{}", transfer_nft_request.to_address);
-    //let database = database.try_lock().unwrap();
-    transfer_nft(transfer_nft_request.to_address, transfer_nft_request.token_id).await.unwrap();
+    let token_id = {
+        let database = database.try_lock().unwrap();
+        let token_counter = database.token_counter;
+        transfer_nft_request
+            .token_id
+            .as_ref()
+            .unwrap_or(&token_counter).clone()
+    };
+    let transaction_hash = transfer_nft(transfer_nft_request.to_address, token_id)
+        .await
+        .unwrap();
+    Json(TransferNFTResponse { transaction_hash })
 }
 
 #[options("/transfer-nft")]
@@ -174,10 +190,24 @@ pub fn rocket() -> _ {
     block_on(deploy_contract()).unwrap();
     rocket::build()
         .attach(CORS)
-        .mount("/", routes![options_transfer_nft, options_mint_nft, options_userprogress, options_create_user])
         .mount(
             "/",
-            openapi_get_routes![create_user, get_user, put_userprogress, post_mint_nft, post_transfer_nft],
+            routes![
+                options_transfer_nft,
+                options_mint_nft,
+                options_userprogress,
+                options_create_user
+            ],
+        )
+        .mount(
+            "/",
+            openapi_get_routes![
+                create_user,
+                get_user,
+                put_userprogress,
+                post_mint_nft,
+                post_transfer_nft
+            ],
         )
         .mount(
             "/swagger-ui/",
