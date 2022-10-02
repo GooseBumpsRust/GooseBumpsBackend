@@ -7,7 +7,7 @@ use goose_bumps_backend_lib::models::{example_solana_token, example_uuid, User};
 use goose_bumps_backend_lib::solana::mint;
 use goose_bumps_backend_lib::web3::{deploy_contract, transfer_nft};
 use rocket::State;
-use rocket::{get, post, put, serde::json::Json, serde::uuid::Uuid};
+use rocket::{get, post, put, options, serde::json::Json, serde::uuid::Uuid};
 use rocket::fairing::{Fairing, Info, Kind};
 use rocket::http::{Header, Status};
 use rocket::{Request, Response};
@@ -41,6 +41,9 @@ fn create_user(
     database.users.insert(user_id.to_string(), user.clone());
     Json(user)
 }
+
+#[options("/user")]
+pub async fn options_create_user() {}
 
 #[openapi(tag = "Users")]
 #[get("/user/<user_id>")]
@@ -84,6 +87,9 @@ fn put_userprogress(
     }
 }
 
+#[options("/userprogress")]
+pub async fn options_userprogress() {}
+
 #[derive(Serialize, Deserialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 struct MintNFTRequest {
@@ -108,6 +114,9 @@ async fn post_mint_nft(
     }
 }
 
+#[options("/mint-nft")]
+pub async fn options_mint_nft() {}
+
 pub fn example_address() -> &'static str {
     "0x5cf2273601FD25b8CA59d5d22966cD121c1BFafe"
 }
@@ -131,6 +140,9 @@ async fn post_transfer_nft(
     //let database = database.try_lock().unwrap();
     transfer_nft(transfer_nft_request.to_address, transfer_nft_request.token_id).await.unwrap();
 }
+
+#[options("/transfer-nft")]
+pub async fn options_transfer_nft() {}
 
 pub struct CORS;
 
@@ -162,6 +174,7 @@ pub fn rocket() -> _ {
     block_on(deploy_contract()).unwrap();
     rocket::build()
         .attach(CORS)
+        .mount("/", routes![options_transfer_nft, options_mint_nft, options_userprogress, options_create_user])
         .mount(
             "/",
             openapi_get_routes![create_user, get_user, put_userprogress, post_mint_nft, post_transfer_nft],
